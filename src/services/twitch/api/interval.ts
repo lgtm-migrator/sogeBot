@@ -10,9 +10,9 @@ import { logAvgTime } from '~/helpers/profiler';
 import { setImmediateAwait } from '~/helpers/setImmediateAwait';
 import { checkClips } from '~/services/twitch/calls/checkClips';
 import { getAllStreamTags } from '~/services/twitch/calls/getAllStreamTags';
-import { getChannelChattersUnofficialAPI } from '~/services/twitch/calls/getChannelChattersUnofficialAPI';
 import { getChannelInformation } from '~/services/twitch/calls/getChannelInformation';
 import { getChannelSubscribers } from '~/services/twitch/calls/getChannelSubscribers';
+import { getChatters } from '~/services/twitch/calls/getChatters';
 import { getCurrentStream } from '~/services/twitch/calls/getCurrentStream';
 import { getCurrentStreamTags } from '~/services/twitch/calls/getCurrentStreamTags';
 import { getLatest100Followers } from '~/services/twitch/calls/getLatest100Followers';
@@ -34,17 +34,17 @@ const addInterval = (fnc: keyof typeof functions, intervalId: number) => {
 };
 
 const functions = {
-  getCurrentStream:                getCurrentStream,
-  getCurrentStreamTags:            getCurrentStreamTags,
-  updateBroadcasterType:           updateBroadcasterType,
-  getLatest100Followers:           getLatest100Followers,
-  getChannelSubscribers:           getChannelSubscribers,
-  getChannelChattersUnofficialAPI: getChannelChattersUnofficialAPI,
-  getChannelChatBadges:            getChannelChatBadges,
-  getChannelInformation:           getChannelInformation,
-  checkClips:                      checkClips,
-  getAllStreamTags:                getAllStreamTags,
-  getModerators:                   getModerators,
+  getCurrentStream:      getCurrentStream,
+  getCurrentStreamTags:  getCurrentStreamTags,
+  updateBroadcasterType: updateBroadcasterType,
+  getLatest100Followers: getLatest100Followers,
+  getChannelSubscribers: getChannelSubscribers,
+  getChatters:           getChatters,
+  getChannelChatBadges:  getChannelChatBadges,
+  getChannelInformation: getChannelInformation,
+  checkClips:            checkClips,
+  getAllStreamTags:      getAllStreamTags,
+  getModerators:         getModerators,
 } as const;
 
 export const init = () => {
@@ -53,7 +53,7 @@ export const init = () => {
   addInterval('updateBroadcasterType', constants.HOUR);
   addInterval('getLatest100Followers', constants.MINUTE);
   addInterval('getChannelSubscribers', 2 * constants.MINUTE);
-  addInterval('getChannelChattersUnofficialAPI', 5 * constants.MINUTE);
+  addInterval('getChatters', 5 * constants.MINUTE);
   addInterval('getChannelChatBadges', 5 * constants.MINUTE);
   addInterval('getChannelInformation', constants.MINUTE);
   addInterval('checkClips', constants.MINUTE);

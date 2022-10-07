@@ -22,20 +22,31 @@ import { isIgnored } from '~/helpers/user/isIgnored';
 import { variables } from '~/watchers';
 import joinpart from '~/widgets/joinpart';
 
-export const getChannelChattersUnofficialAPI = async (opts: any) => {
+const loadAllChatters = async(cursor?: string, chatters: string[] = []): Promise<string[]> => {
+  const clientBroadcaster = await client('broadcaster');
+  const broadcasterId = variables.get('services.twitch.broadcasterId') as string;
+
+  const response = await clientBroadcaster.callApi<any>({ url: `chat/chatters?moderator_id=${broadcasterId}&broadcaster_id=${broadcasterId}&first=1000${cursor ? `&after=${cursor}` : ''}`, type: 'helix' });
+  chatters = [...chatters, response.data.map((o: { user_login: string; }) => o.user_login)];
+
+  if (response.pagination.cursor) {
+    return loadAllChatters(response.pagination.cursor, chatters);
+  }
+  return chatters;
+};
+
+export const getChatters = async (opts: any) => {
   if (isDebugEnabled('api.calls')) {
     debug('api.calls', new Error().stack);
   }
   try {
-    const broadcasterUsername = variables.get('services.twitch.broadcasterUsername') as string;
     const botUsername = variables.get('services.twitch.botUsername') as string;
-    const clientBot = await client('bot');
+    const clientBroadcaster = await client('broadcaster');
 
-    const getChatters = await clientBot.unsupported.getChatters(broadcasterUsername);
-    const chatters = getChatters.allChatters.filter(userName => {
+    const chatters: string[] = (await loadAllChatters()).filter(userName => {
       // exclude global ignore list
       const shouldExclude = isIgnored({ userName });
-      debug('api.getChannelChattersUnofficialAPI', `${userName} - shouldExclude: ${shouldExclude}`);
+      debug('api.getChatters', `${userName} - shouldExclude: ${shouldExclude}`);
       return !shouldExclude;
     });
     const allOnlineUsers = await getAllOnlineUsernames();
@@ -65,7 +76,7 @@ export const getChannelChattersUnofficialAPI = async (opts: any) => {
           await getRepository(User).save({ ...user, isOnline: true });
           if (!user.createdAt) {
             // run this after we save new user
-            const getUserByName = await clientBot.users.getUserByName(userName);
+            const getUserByName = await clientBroadcaster.users.getUserByName(userName);
             if (getUserByName) {
               changelog.update(getUserByName.id, { createdAt: new Date(getUserByName.creationDate).toISOString() });
             }
@@ -77,7 +88,7 @@ export const getChannelChattersUnofficialAPI = async (opts: any) => {
     }
 
     for (const usernameBatch of chunk(usersToFetch, 100)) {
-      clientBot.users.getUsersByNames(usernameBatch).then(users => {
+      clientBroadcaster.users.getUsersByNames(usernameBatch).then(users => {
         if (users) {
           getRepository(User).save(
             users.map(user => {
@@ -118,7 +129,7 @@ export const getChannelChattersUnofficialAPI = async (opts: any) => {
     if (e instanceof Error) {
       if (e.message.includes('Invalid OAuth token')) {
         warning(`${getFunctionName()} => Invalid OAuth token - attempting to refresh token`);
-        await refresh('bot');
+        await refresh('broadcaster');
       } else {
         error(`${getFunctionName()} => ${e.stack ?? e.message}`);
       }
